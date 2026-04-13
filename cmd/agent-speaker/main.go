@@ -7,6 +7,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/jason/agent-speaker/internal/daemon"
+	"github.com/jason/agent-speaker/internal/group"
 	"github.com/jason/agent-speaker/internal/identity"
 	"github.com/jason/agent-speaker/internal/messaging"
 	"github.com/jason/agent-speaker/internal/nostr"
@@ -44,6 +45,8 @@ func main() {
 			storage.StorageCmd,
 			// TUI
 			tui.TUICmd,
+			// Group Chat
+			group.GroupCmd,
 			// Daemon
 			daemon.DaemonCmd,
 		},

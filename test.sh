@@ -63,6 +63,13 @@ run_test "internal/tui" "go test ./internal/tui"
 
 echo ""
 echo "========================================="
+echo "GROUP CHAT UNIT TESTS"
+echo "========================================="
+
+run_test "internal/group" "go test ./internal/group"
+
+echo ""
+echo "========================================="
 echo "E2E TESTS (Requires identities)"
 echo "========================================="
 
@@ -75,6 +82,7 @@ else
     echo "      Run ./test_e2e.sh for full messaging E2E tests"
     echo "      Run ./test_storage_e2e.sh for storage E2E tests"
     echo "      Run ./test_tui_e2e.sh for TUI E2E tests"
+    echo "      Run ./test_group_e2e.sh for group chat E2E tests"
 fi
 
 echo ""
