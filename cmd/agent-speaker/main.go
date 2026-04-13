@@ -11,6 +11,7 @@ import (
 	"github.com/jason/agent-speaker/internal/identity"
 	"github.com/jason/agent-speaker/internal/messaging"
 	"github.com/jason/agent-speaker/internal/nostr"
+	"github.com/jason/agent-speaker/internal/profile"
 	"github.com/jason/agent-speaker/internal/storage"
 	"github.com/jason/agent-speaker/internal/tui"
 	"github.com/urfave/cli/v3"
@@ -47,6 +48,8 @@ func main() {
 			tui.TUICmd,
 			// Group Chat
 			group.GroupCmd,
+			// Agent Profile
+			profile.ProfileCmd,
 			// Daemon
 			daemon.DaemonCmd,
 		},
