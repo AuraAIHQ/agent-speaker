@@ -56,6 +56,13 @@ run_test "storage info" "./bin/agent-speaker storage info"
 
 echo ""
 echo "========================================="
+echo "TUI UNIT TESTS"
+echo "========================================="
+
+run_test "internal/tui" "go test ./internal/tui"
+
+echo ""
+echo "========================================="
 echo "E2E TESTS (Requires identities)"
 echo "========================================="
 
@@ -67,6 +74,7 @@ else
     echo "  ✅ Identities found - E2E tests ready"
     echo "      Run ./test_e2e.sh for full messaging E2E tests"
     echo "      Run ./test_storage_e2e.sh for storage E2E tests"
+    echo "      Run ./test_tui_e2e.sh for TUI E2E tests"
 fi
 
 echo ""
