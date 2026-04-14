@@ -94,7 +94,7 @@ Example: agent-speaker agent msg --from alice --to bob --content "Hello!"`,
 			return fmt.Errorf("message content is required")
 		}
 
-		ks, err := identity.LoadKeyStore()
+		ks, err := identity.LoadAndUnlockKeyStore()
 		if err != nil {
 			return err
 		}
@@ -226,7 +226,7 @@ var AgentInboxCmd = &cli.Command{
 		},
 	},
 	Action: func(ctx context.Context, c *cli.Command) error {
-		ks, err := identity.LoadKeyStore()
+		ks, err := identity.LoadAndUnlockKeyStore()
 		if err != nil {
 			return err
 		}

@@ -61,7 +61,7 @@ Run this in a separate terminal or as a system service.`,
 		},
 	},
 	Action: func(ctx context.Context, c *cli.Command) error {
-		ks, err := identity.LoadKeyStore()
+		ks, err := identity.LoadAndUnlockKeyStore()
 		if err != nil {
 			return fmt.Errorf("failed to load keystore: %w", err)
 		}
