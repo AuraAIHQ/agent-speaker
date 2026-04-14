@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/fatih/color"
-	"github.com/jason/agent-speaker/internal/identity"
+	"github.com/AuraAIHQ/agent-speaker/internal/identity"
 	"github.com/urfave/cli/v3"
 )
 

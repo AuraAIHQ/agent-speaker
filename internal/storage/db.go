@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jason/agent-speaker/internal/identity"
+	"github.com/AuraAIHQ/agent-speaker/internal/identity"
 	_ "modernc.org/sqlite"
 )
 

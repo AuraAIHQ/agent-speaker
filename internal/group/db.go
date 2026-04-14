@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jason/agent-speaker/internal/storage"
-	"github.com/jason/agent-speaker/pkg/types"
+	"github.com/AuraAIHQ/agent-speaker/internal/storage"
+	"github.com/AuraAIHQ/agent-speaker/pkg/types"
 )
 
 // DB wraps group database operations

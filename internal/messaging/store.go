@@ -4,9 +4,9 @@ import (
 	"sync"
 
 	"fiatjaf.com/nostr"
-	"github.com/jason/agent-speaker/internal/identity"
-	"github.com/jason/agent-speaker/internal/storage"
-	"github.com/jason/agent-speaker/pkg/types"
+	"github.com/AuraAIHQ/agent-speaker/internal/identity"
+	"github.com/AuraAIHQ/agent-speaker/internal/storage"
+	"github.com/AuraAIHQ/agent-speaker/pkg/types"
 )
 
 var (

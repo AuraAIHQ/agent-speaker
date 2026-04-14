@@ -6,8 +6,8 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/jason/agent-speaker/internal/common"
-	"github.com/jason/agent-speaker/internal/identity"
+	"github.com/AuraAIHQ/agent-speaker/internal/common"
+	"github.com/AuraAIHQ/agent-speaker/internal/identity"
 	"github.com/urfave/cli/v3"
 )
 
@@ -70,7 +70,7 @@ var HistoryCmd = &cli.Command{
 					return nil
 				}
 
-				fmt.Printf("📜 Conversation with %s (%d messages)\n\n", c.String("with"))
+				fmt.Printf("📜 Conversation with %s (%d messages)\n\n", c.String("with"), len(messages))
 
 				w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 				// Reverse order (oldest first)
@@ -184,7 +184,7 @@ var HistoryCmd = &cli.Command{
 						direction = "←"
 					}
 
-					fmt.Printf("[%s] %s %s: %s\n",
+					fmt.Printf("[%s] %s %d: %s\n",
 						msg.SenderNpub[:20],
 						direction,
 						msg.CreatedAt,

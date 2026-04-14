@@ -6,8 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/jason/agent-speaker/internal/identity"
-	"github.com/jason/agent-speaker/pkg/types"
+	"github.com/AuraAIHQ/agent-speaker/internal/identity"
+	"github.com/AuraAIHQ/agent-speaker/pkg/types"
 )
 
 // ContactsModel represents the contacts list TUI

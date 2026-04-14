@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"fiatjaf.com/nostr"
-	"github.com/jason/agent-speaker/internal/common"
-	"github.com/jason/agent-speaker/internal/identity"
-	"github.com/jason/agent-speaker/internal/messaging"
-	"github.com/jason/agent-speaker/internal/notify"
-	"github.com/jason/agent-speaker/pkg/crypto"
-	"github.com/jason/agent-speaker/pkg/types"
+	"github.com/AuraAIHQ/agent-speaker/internal/common"
+	"github.com/AuraAIHQ/agent-speaker/internal/identity"
+	"github.com/AuraAIHQ/agent-speaker/internal/messaging"
+	"github.com/AuraAIHQ/agent-speaker/internal/notify"
+	"github.com/AuraAIHQ/agent-speaker/pkg/crypto"
+	"github.com/AuraAIHQ/agent-speaker/pkg/types"
 	"github.com/urfave/cli/v3"
 )
 
@@ -125,6 +125,7 @@ Run this in a separate terminal or as a system service.`,
 func processOutbox(ctx context.Context, myIdentity *types.Identity) {
 	outbox, err := messaging.LoadOutbox()
 	if err != nil {
+		fmt.Printf("[%s] ⚠️  Failed to load outbox: %v\n", time.Now().Format("15:04:05"), err)
 		return
 	}
 
@@ -154,6 +155,7 @@ func processOutbox(ctx context.Context, myIdentity *types.Identity) {
 		// Parse event
 		var event nostr.Event
 		if err := json.Unmarshal([]byte(entry.EventJSON), &event); err != nil {
+			fmt.Printf("   ⚠️  Failed to parse event %s...: %v\n", entry.ID[:16], err)
 			continue
 		}
 
@@ -200,8 +202,16 @@ func processOutbox(ctx context.Context, myIdentity *types.Identity) {
 
 // watchInbox monitors for new messages
 func watchInbox(ctx context.Context, myIdentity *types.Identity, ks *types.KeyStore, seenMessages map[string]bool, useNotify bool, autoReply bool) {
-	recipientPK, _ := identity.GetPublicKey(ks, myIdentity.Nickname)
-	recipientSK, _ := identity.GetSecretKey(ks, myIdentity.Nickname)
+	recipientPK, err := identity.GetPublicKey(ks, myIdentity.Nickname)
+	if err != nil {
+		fmt.Printf("[%s] ⚠️  Failed to get public key: %v\n", time.Now().Format("15:04:05"), err)
+		return
+	}
+	recipientSK, err := identity.GetSecretKey(ks, myIdentity.Nickname)
+	if err != nil {
+		fmt.Printf("[%s] ⚠️  Failed to get secret key: %v\n", time.Now().Format("15:04:05"), err)
+		return
+	}
 
 	filter := nostr.Filter{
 		Kinds: []nostr.Kind{messaging.AgentKind},

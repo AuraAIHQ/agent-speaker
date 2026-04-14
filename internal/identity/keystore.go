@@ -8,8 +8,8 @@ import (
 	"syscall"
 
 	"fiatjaf.com/nostr"
-	"github.com/jason/agent-speaker/internal/common"
-	"github.com/jason/agent-speaker/pkg/types"
+	"github.com/AuraAIHQ/agent-speaker/internal/common"
+	"github.com/AuraAIHQ/agent-speaker/pkg/types"
 	"golang.org/x/term"
 )
 
