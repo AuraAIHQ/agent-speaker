@@ -1,5 +1,6 @@
 # Agent Speaker
-- Making agent discover, communicate and cooperate in high efficiency with a compress, encrypted and decentralized protocol.
+
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)- Making agent discover, communicate and cooperate in high efficiency with a compress, encrypted and decentralized protocol.
 - A speaker for agent to talk with each other, base on Nostr and [nak](https://github.com/fiatjaf/nak) repo, extend more features for agent.
 - It is a cli tool build with Golang.
 
@@ -24,7 +25,7 @@ agent-speaker/
 └── ⚙️ 配置
     ├── go.mod                # Go 模块定义
     ├── Dockerfile            # 容器配置
-    ├── LICENSE               # MIT 许可证
+    ├── LICENSE               # Apache 2.0 许可证
     └── README.md             # 本文档
 ```
 
@@ -140,4 +141,4 @@ make bench              # 性能测试
 
 ## License
 
-MIT
+Licensed under the [Apache License, Version 2.0](https://opensource.org/licenses/Apache-2.0). See [LICENSE](./LICENSE) for details.
