@@ -11,6 +11,7 @@ import (
 	"github.com/AuraAIHQ/agent-speaker/internal/messaging"
 	"github.com/AuraAIHQ/agent-speaker/internal/nostr"
 	"github.com/AuraAIHQ/agent-speaker/internal/storage"
+	"github.com/AuraAIHQ/agent-speaker/internal/tui"
 	"github.com/urfave/cli/v3"
 )
 
@@ -41,6 +42,8 @@ func main() {
 			messaging.HistoryCmd,
 			// Storage
 			storage.StorageCmd,
+			// TUI
+			tui.TUICmd,
 			// Daemon
 			daemon.DaemonCmd,
 		},
