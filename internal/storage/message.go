@@ -46,6 +46,21 @@ func (s *MessageStore) StoreMessage(msg *types.StoredMessage) error {
 	// 2. `INSERT OR REPLACE` is DELETE-then-INSERT, so a later write that carries
 	//    no plaintext blanked the decrypted text a previous write had stored.
 	//    That is not specific to the race above; any second write did it.
+	//
+	// is_incoming is written with a CASE rather than the shorter
+	// `messages.is_incoming | excluded.is_incoming`. Both are monotonic for
+	// clean 0/1 input, but `|` ABSORBS a bad value permanently -- NULL|1 is
+	// NULL, -1|1 is -1 -- and every read then fails scanning into a Go bool,
+	// whereas `INSERT OR REPLACE` used to overwrite such a value back to a
+	// clean 0/1. Nothing can write a non-0/1 value today (the column is only
+	// ever bound from a Go bool, and defaults to 0), so this costs nothing; it
+	// just refuses to trade away the old behaviour's self-healing.
+	//
+	// Only content, plaintext and relay are guarded against being blanked.
+	// sender_npub, recipient_npub, created_at, received_at, is_encrypted and
+	// kind are deliberately last-write-wins, exactly as before this change --
+	// every production caller fills them from the nostr event, so a zero there
+	// would mean the caller is already wrong.
 	query := `
 		INSERT INTO messages (
 			id, event_id, sender_npub, recipient_npub, content, plaintext,
@@ -60,7 +75,7 @@ func (s *MessageStore) StoreMessage(msg *types.StoredMessage) error {
 			created_at     = excluded.created_at,
 			received_at    = excluded.received_at,
 			is_encrypted   = excluded.is_encrypted,
-			is_incoming    = (messages.is_incoming | excluded.is_incoming),
+			is_incoming    = CASE WHEN messages.is_incoming = 1 OR excluded.is_incoming = 1 THEN 1 ELSE 0 END,
 			relay          = CASE WHEN excluded.relay     != '' THEN excluded.relay     ELSE messages.relay     END,
 			kind           = excluded.kind
 	`
