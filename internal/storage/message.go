@@ -30,11 +30,39 @@ func NewMessageStore(db sqlExecutor) *MessageStore {
 
 // StoreMessage stores a message in the database
 func (s *MessageStore) StoreMessage(msg *types.StoredMessage) error {
+	// UPSERT, not `INSERT OR REPLACE`. Two separate reasons, and each one alone
+	// would justify the change:
+	//
+	// 1. `is_incoming` must be MONOTONIC. `agent msg` publishes to the relay
+	//    before it stores the message locally, so when the daemon's own
+	//    subscription receives the echo inside that window it writes the row with
+	//    is_incoming=1 — and the sender's later write then set it back to 0,
+	//    while the daemon's `seen` set already held the id and never reprocessed
+	//    it. The arrival was erased and could not be re-observed, which is what
+	//    breaks a self-addressed liveness canary: it can never confirm its own
+	//    message arrived. How often the window is actually hit is environment
+	//    dependent and has not been pinned down -- see the test file.
+	//
+	// 2. `INSERT OR REPLACE` is DELETE-then-INSERT, so a later write that carries
+	//    no plaintext blanked the decrypted text a previous write had stored.
+	//    That is not specific to the race above; any second write did it.
 	query := `
-		INSERT OR REPLACE INTO messages (
+		INSERT INTO messages (
 			id, event_id, sender_npub, recipient_npub, content, plaintext,
 			created_at, received_at, is_encrypted, is_incoming, relay, kind
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			event_id       = excluded.event_id,
+			sender_npub    = excluded.sender_npub,
+			recipient_npub = excluded.recipient_npub,
+			content        = CASE WHEN excluded.content   != '' THEN excluded.content   ELSE messages.content   END,
+			plaintext      = CASE WHEN excluded.plaintext != '' THEN excluded.plaintext ELSE messages.plaintext END,
+			created_at     = excluded.created_at,
+			received_at    = excluded.received_at,
+			is_encrypted   = excluded.is_encrypted,
+			is_incoming    = (messages.is_incoming | excluded.is_incoming),
+			relay          = CASE WHEN excluded.relay     != '' THEN excluded.relay     ELSE messages.relay     END,
+			kind           = excluded.kind
 	`
 
 	receivedAt := msg.ReceivedAt
