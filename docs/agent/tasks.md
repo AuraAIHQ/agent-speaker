@@ -12,21 +12,43 @@
 
 PR #35 已经修掉这一层的两个缺陷(`StoreMessage` 的 `INSERT OR REPLACE` 语义、legacy 迁移的 id 碰撞),但**它的三轮对抗评审在同一层挖出四个既有缺陷**,全部还在。下面按「先修会让别的修复失效的那个」排序。
 
-### M2-F5-T1 · SQLite PRAGMA 没有真正生效 · S · READY
-**为什么排第一**:`internal/storage/db.go:35-70` 的 `PRAGMA busy_timeout / journal_mode / synchronous / foreign_keys` 是对 `*sql.DB` **连接池** `Exec` 的,只落在恰好服务那次调用的连接上;池里其他连接拿的是引擎默认值(`busy_timeout=0`)。代码注释声称设了 5000ms 来应对并发 DDL,**实际上大部分连接根本没有**。评审实测并发写在该速率下约 63-68% 撞 `SQLITE_BUSY`。
+### M2-F5-T1 · SQLite PRAGMA 只在一条连接上生效 · S · READY
+**机制**:`internal/storage/db.go:35-70` 的 `PRAGMA` 是对 `*sql.DB` **连接池** `Exec` 的。`db.Exec` 只借一条连接、用完归还,**pragma 只留在那一条上**;池里其余连接(以及后续按需新建的连接)拿的是驱动默认值。
 
-**它排第一是因为它会让别的并发修复看起来无效**:任何针对 daemon-vs-发送方并发写的改进,只要底下的连接仍然 `busy_timeout=0`,就会继续以 `database is locked` 收场,让人误判修错了地方。
+**实测**(`modernc.org/sqlite` v1.48.2,同一个 `*sql.DB` 上同时持有两条连接分别读):
 
-**做什么**:把 pragma 移进 DSN(`file:...?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)`),或改用 `connector`/`ConnectHook`,确保**池里每条连接**都带上。
+| PRAGMA | 不设任何 pragma(对照) | 复刻 `InitDB` 之后 | 坏了吗 |
+|---|---|---|---|
+| `busy_timeout` | 0 / 0 | 5000 / **0** | ✅ 坏 |
+| `foreign_keys` | 0 / 0 | 1 / **0** | ✅ 坏 |
+| `synchronous` | 2 (FULL) / 2 | 1 (NORMAL) / **2** | ✅ 坏 |
+| `journal_mode` | delete | wal / **wal** | ❌ 没坏 |
+
+8 条并发连接上读 `foreign_keys` 得到 `[0 0 0 1 1 1 0 1]`——**拿到哪条连接是掷硬币**。
+
+`journal_mode` 是唯一幸免的:**WAL 是写进数据库文件的属性,不是每连接状态**,所以设一次对所有连接都算数。这也解释了为什么这个 bug 一直没被发现——最显眼的那条恰好是有效的。
+
+**后果**,按严重度:
+1. **`foreign_keys` 在多数连接上是关的** —— 外键约束时开时关,取决于你抽到哪条连接。
+2. **`busy_timeout=0`** —— 并发写不重试,直接 `database is locked`。代码注释明写这条是为了应对并发 DDL,实际上大部分连接没有。
+3. **`synchronous` 停留在 FULL** —— 不是正确性问题,是每次提交都多一次 fsync,与注释声称的 NORMAL 不符。
+
+**为什么排第一**:后面几个 Task(尤其 T2 的 outbox 并发)的验收信号都要靠「并发写不再失败」来判断,而 `busy_timeout=0` 会让它们继续以 `database is locked` 收场——**人会以为修错了地方,而不是以为还差一层。**
+
+> ⚠️ **量默认值,别假定它是 0。** 这条最初的描述只点名了 `busy_timeout`。外部评审用 `mattn/go-sqlite3` 复核时得出「`busy_timeout` 本来就是 5000、这条不成立」——**它那个驱动的默认值确实是 5000**,但本仓库用的是 `modernc.org/sqlite`,默认是 0。教训对双方都成立:验证「没有 X 就会退回默认值」这类命题,**必须去量那个默认值,而且要用本仓库真正在用的驱动量**。上表的「对照」那一列就是为此存在的。
+
+**做什么**:把 pragma 移进 DSN(`file:...?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)&_pragma=synchronous(1)`),或改用 `connector`/`ConnectHook`,确保**池里每条连接**都带上。`journal_mode` 留在原处也行,但一起搬更一致。
 
 **验收命令**:
 ```bash
 go test ./internal/storage/... -race -count=1
-# 新测试:强制打开多条连接(db.SetMaxOpenConns(N) + 并发查询占住),
-# 对每条连接查 `PRAGMA busy_timeout` / `PRAGMA journal_mode`,
-# 断言全部是 5000 / wal —— 不能只查一条。
+# 新测试(必须带正对照,否则证明不了它会动):
+#   在同一个 *sql.DB 上用 db.Conn() 同时持有 >=2 条连接,各读
+#   PRAGMA busy_timeout / foreign_keys / synchronous
+#   修好后:每条连接都必须是 5000 / 1 / 1
+#   正对照:改回对池 Exec 的写法,断言出现 5000/0 这种不一致
 ```
-**依赖**:— · **来源**:FU-5(PR #35 评审)
+**依赖**:— · **来源**:FU-5(PR #35 评审)+ 本仓库实测修正
 
 ### M2-F5-T2 · `SaveOutbox` 并发写不安全 · M · READY
 **为什么**:[#26](https://github.com/iDoris-ai/Hyphae/issues/26)。两种失败模式,M1.5 期间用 20 个并发 goroutine 实测复现过:
@@ -43,7 +65,7 @@ go test ./internal/messaging/... -race -count=1 -run 'Outbox'
 # 新测试:N 个并发 goroutine 各自 load→改一条→save,
 # 断言 (1) 最终文件可解析 (2) N 个改动全部存活(不丢更新)
 ```
-**依赖**:M2-F5-T1(否则并发测试会被 `database is locked` 干扰,难判是不是真修好了) · **来源**:#26 / FU-2
+**依赖**:M2-F5-T1(否则并发测试会被 `busy_timeout=0` 导致的 `database is locked` 干扰,难判是不是真修好了) · **来源**:#26 / FU-2
 
 ### M2-F5-T3 · outbox 重试把密文当明文存 · S · READY
 **为什么**:`internal/messaging/outbox.go:281` 的重试调 `StoreOutgoingMessage(&event, entry.RecipientNpub, event.Content, true)`,而 `event` 是从 `entry.EventJSON` 反解出来的**已加密(可能还 zstd 压缩过)**事件——所以 `event.Content` 是密文,被当 `plaintext` 参数传进去。
